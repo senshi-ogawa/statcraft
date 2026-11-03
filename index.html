@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0b1a">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stat Craft">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="食事・運動・睡眠・サプリの報告から、体の状態と数時間先の予測を見える化する個人用アプリ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Stat Craft</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+html{padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+
+/* Layout: single-column phone app, 4 views (home/input/history/settings) behind a fixed tab bar. Committed dark status-screen look. */
+:root{
+  --bg:#0d0b1a; --surface:#171428; --surface2:#201c36; --line:#2d2848;
+  --fg:#f2eefc; --muted:#9a93b8; --accent:#ff6b57; --ok:#5ee0a0; --warn:#ffc857;
+  --c1:#ffc857; --c2:#5ee0a0; --c3:#ff7a9c; --c4:#5cc8ff; --c5:#b99bff; --c6:#7be0d6; --c7:#ffd98a; --c8:#ff9d5c;
+  --display:'Unbounded','Zen Kaku Gothic New',sans-serif;
+  --body:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--fg);font:15px/1.6 var(--body);margin:0;padding-block:12px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:radial-gradient(120% 60% at 80% -10%,#2a1f55 0%,transparent 60%),var(--bg)}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+section[hidden]{display:none}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{font:700 15px var(--display);letter-spacing:.04em}
+.logo span{color:var(--accent)}
+.date{font:400 12px var(--mono);color:var(--muted)}
+button,input,textarea,select{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--c4);outline-offset:2px}
+.modes{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.modes button{flex:1;border:0;background:none;color:var(--muted);font:500 12px var(--body);padding:7px 4px;border-radius:999px;cursor:pointer;min-height:36px}
+.modes button[aria-pressed=true]{background:var(--fg);color:var(--bg);font-weight:700}
+.sample{font:500 12px var(--mono);color:var(--warn);background:#2a2412;border:1px solid #5a4a1a;border-radius:12px;padding:6px 12px}
+.hero{display:flex;align-items:center;gap:18px}
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .num b{font:700 34px/1 var(--display)}
+.ring .num small{font:400 11px var(--mono);color:var(--muted);margin-top:4px}
+.goal{min-width:0}
+.goal small{font:500 11px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.goal h1{font:700 21px/1.3 var(--display);margin:4px 0 6px;text-wrap:balance}
+.sub{margin:0 0 10px;font-size:13px;line-height:1.55;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12px var(--body);padding:3px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line)}
+h2{font:700 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;justify-content:space-between}
+.grp{margin:14px 0 8px;font:700 14px var(--body)}
+.grp:first-child{margin-top:0}
+.grid+.grp{margin-top:18px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.g{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.g .top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.g .ico{min-width:30px;padding:0 6px;gap:2px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:color-mix(in srgb,var(--c) 20%,transparent)}
+.delta{font:600 12px var(--mono);color:var(--c)}
+.g .name{font-weight:700;font-size:14px;line-height:1.35}
+.hid{display:inline-block;margin-left:6px;font:500 10px var(--mono);color:var(--c);border:1px solid var(--c);border-radius:99px;padding:0 6px;vertical-align:middle;white-space:nowrap}
+.g .val{font:700 26px/1 var(--display)}
+.g .val i{font:400 11px var(--mono);color:var(--muted);font-style:normal;margin-left:2px}
+.bar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.bar span{display:block;height:100%;border-radius:99px;background:var(--c)}
+.g .state{font-size:12px;color:var(--muted)}
+.g .pro{font:400 11px/1.5 var(--mono);color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+body[data-mode=simple] .pro,body[data-mode=simple] .why,body[data-mode=simple] .sci{display:none}
+body[data-mode=standard] .pro{display:none}
+body[data-mode=custom] .state{display:none}
+.tl{display:flex;flex-direction:column;gap:10px}
+.slot{display:grid;grid-template-columns:62px 1fr;gap:12px}
+.time{font:600 12px/1.3 var(--mono);color:var(--muted);padding-top:12px}
+.time b{display:block;color:var(--fg);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;border-left:6px solid var(--c);min-width:0}
+.card h3{margin:0;font:700 16px/1.4 var(--body)}
+.card .why{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.card .sci{margin:6px 0 0;font:400 11px/1.5 var(--mono);color:var(--c)}
+.debug{background:linear-gradient(135deg,#2b1d3d,#1c1a33);border:1px solid #4a3768;border-radius:20px;padding:16px}
+.debug h3{margin:0 0 6px;font:700 16px var(--body)}
+.debug p{margin:0 0 10px;font-size:14px}
+.debug ul{margin:0;padding-left:20px;font-size:14px}
+.note{font-size:11px;color:var(--muted);text-align:center;margin:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.panel h3{margin:0;font:700 16px var(--body)}
+.panel p{margin:0;font-size:13px;color:var(--muted)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input[type=text],input[type=number],input[type=time],select,textarea{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--fg);width:100%;min-height:44px}
+textarea{resize:vertical;line-height:1.5}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.btn{border:0;border-radius:999px;padding:10px 16px;font:700 14px var(--body);background:var(--accent);color:#1a0d0a;cursor:pointer;min-height:44px}
+.btn.alt{background:var(--surface2);color:var(--fg);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.step{display:flex;gap:10px;align-items:flex-start}
+.free{font-size:13px;line-height:1.6;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);border-radius:12px;padding:10px 12px}
+.free b{color:var(--ok)}
+.step .hl{margin:0;font:700 19px/1.5 var(--body);color:var(--fg);background:color-mix(in srgb,var(--accent) 16%,transparent);border-left:4px solid var(--accent);border-radius:8px;padding:8px 12px;text-wrap:balance}
+.meter{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.meter span{display:block;height:100%;width:0;border-radius:99px;background:var(--ok);transition:width .4s}
+.meter span.mid{background:var(--warn)}
+.meter span.hi{background:var(--accent)}
+.banner{font-size:13px;background:#2a2412;border:1px solid #5a4a1a;color:var(--warn);border-radius:12px;padding:8px 12px}
+.tips{margin:0;padding-left:20px;font-size:12px;color:var(--muted);line-height:1.7}
+.faint{font-size:12px!important;color:var(--muted);opacity:.7}
+.step>b{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1a0d0a;display:grid;place-items:center;font:700 13px var(--mono)}
+.step div{min-width:0;flex:1;display:flex;flex-direction:column;gap:8px}
+.err{color:var(--c3);font-size:13px;white-space:pre-wrap}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick label{flex-direction:row;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--fg);min-height:40px}
+.hist{display:flex;flex-direction:column;gap:10px}
+.h{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;gap:12px;align-items:center;width:100%}
+.h .sc{font:700 22px var(--display);color:var(--accent);flex:none;min-width:44px}
+.h div{min-width:0}
+.h small{display:block;font:400 11px var(--mono);color:var(--muted)}
+.h span{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{position:fixed;left:0;right:0;bottom:0;max-width:460px;margin-inline:auto;display:flex;justify-content:space-around;padding:6px max(16px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));background:linear-gradient(to top,var(--bg) 78%,transparent);z-index:5}
+.tabs button{background:none;border:0;color:var(--muted);font:500 11px var(--body);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-width:64px;min-height:48px}
+.tabs button[aria-current=page]{color:var(--fg);font-weight:700}
+.tabs span{font-size:20px;line-height:1}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--fg);color:var(--bg);font-weight:700;font-size:13px;padding:8px 16px;border-radius:99px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:no-preference){.bar span{transition:width .6s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">STAT<span>/</span>CRAFT</div>
+    <div class="date" id="date"></div>
+  </header>
+
+  <!-- HOME -->
+  <section id="v-home" data-v="home">
+    <div class="wrap" style="gap:20px">
+      <div class="modes" role="group" aria-label="表示モード">
+        <button data-m="simple" aria-pressed="false">シンプル</button>
+        <button data-m="standard" aria-pressed="true">スタンダード</button>
+        <button data-m="custom" aria-pressed="false">カスタム</button>
+      </div>
+      <div class="sample" id="cNote" hidden>圧縮された記録です。数値と時間帯だけを表示しています。</div>
+      <div class="sample" id="sampleTag" hidden>サンプル表示です。「入力」から最初の報告をすると、あなたの結果に置き換わります。</div>
+      <div class="hero">
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface2)" stroke-width="12"/><circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
+          <div class="num"><b id="score">0</b><small>COND</small></div>
+        </div>
+        <div class="goal">
+          <small>本日の目標</small>
+          <h1 id="goalName">ゾーン掌握</h1>
+          <p class="sub" id="goalSub"></p>
+          <div class="chips" id="goalChips"></div>
+        </div>
+      </div>
+      <div><h2><span>ステータス変化</span><span id="snapTime"></span></h2><div id="grid"></div></div>
+      <div><h2><span>今日の予測タイムライン</span><span>推定</span></h2><div class="tl" id="tl"></div></div>
+      <div class="debug"><h3>🔍 生体デバッグ</h3><p id="dbgSum"></p><ul id="dbgAct"></ul></div>
+    </div>
+  </section>
+
+  <!-- INPUT -->
+  <section id="v-input" data-v="input" hidden>
+    <div class="wrap" style="gap:16px">
+      <div class="free" id="costNote"><b>追加費用を発生させないために</b>、AI の計算は、あなたがすでに契約している AI を使っています。新しい契約や API の登録は不要です。<br>そのかわり、依頼文をコピーして AI に貼り、AI の答えをコピーしてここに貼り戻すという、<b>コピー＆貼り付けの手間をお願いしています</b>。ご協力をお願いします。</div>
+      <div class="panel">
+        <div class="step"><b>1</b><div>
+          <h3>報告を書く</h3>
+          <p class="hl">細かく書くほど、答えの精度が上がります</p><p>食事、運動、睡眠、サプリ、体感を書いてください。</p><ul class="tips"><li>食事は量まで：「白米 150g」「納豆1パック」「朝起きてバナナを1本」</li><li>前日の睡眠：「昨夜は6時間、夜中に2回起きた」</li><li>時刻や体感も：「7:30に朝食」「午後からだるい」「サプリは亜鉛15mg」</li></ul>
+          <label for="report">今日の報告<textarea id="report" rows="7" placeholder="例）7:30 朝起きてバナナ1本。8:00 白米150g、納豆1パック、卵1個、コーヒー2杯。昨夜は6時間睡眠で、夜中に2回目が覚めた。いまは少しだるい。&#10;&#10;※睡眠アプリや食事の写真もOKです（AI に貼るときに添付できます）"></textarea></label>
+          <button class="btn" id="mk">依頼文を作る</button>
+        </div></div>
+      </div>
+      <div class="panel" id="p2" hidden>
+        <div class="step"><b>2</b><div>
+          <h3>AI に貼る</h3>
+          <p>依頼文をコピーして、ふだん使っている AI（ChatGPT、Claude、Gemini など）に貼って送ってください。睡眠アプリや食事の画像は、貼ったあとに同じチャットへ添付します。</p>
+          <label for="prompt">依頼文<textarea id="prompt" rows="5" readonly></textarea></label>
+          <p class="faint">📎 画像の貼り付けもOKです。睡眠アプリの画面や食事・サプリの写真は、この依頼文を貼ったあと、同じ AI のチャットに添付してください。</p>
+          <div class="btns"><button class="btn" id="cp">コピーする</button></div>
+        </div></div>
+      </div>
+      <div class="panel" id="p3" hidden>
+        <div class="step"><b>3</b><div>
+          <h3>答えを貼り戻す</h3>
+          <p>AI の答え（{ ではじまる部分）をコピーして、ここに貼ってください。</p>
+          <label for="answer">AI の答え<textarea id="answer" rows="5" placeholder="ここに貼り付け"></textarea></label>
+          <div class="err" id="err" role="alert"></div>
+          <div class="btns"><button class="btn" id="load">結果を表示する</button><button class="btn alt" id="fix" hidden>修正依頼文をコピー</button><button class="btn alt" id="clrA">入力内容をクリア</button></div>
+        </div></div>
+      </div>
+      <p class="note">結果は推定値で、医療上の助言ではありません。</p>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="v-history" data-v="history" hidden>
+    <div class="wrap" style="gap:12px">
+      <h2><span>履歴</span><span id="hcount"></span></h2>
+      <div class="banner" id="hbanner" hidden></div>
+      <div class="hist" id="hist"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="v-settings" data-v="settings" hidden>
+    <div class="wrap" style="gap:16px">
+      <div class="panel">
+        <h3>目標</h3>
+        <div class="pick" id="goals"></div>
+        <p id="goalDesc"></p>
+      </div>
+      <div class="panel">
+        <h3>プロフィール</h3>
+        <div class="row">
+          <label for="sex">性別<select id="sex"><option value="m">男性</option><option value="f">女性</option><option value="x">回答しない</option></select></label>
+          <label for="age">年齢<input id="age" type="number" inputmode="numeric" min="10" max="99"></label>
+        </div>
+        <div class="row">
+          <label for="ht">身長 (cm)<input id="ht" type="number" inputmode="decimal"></label>
+          <label for="wt">体重 (kg)<input id="wt" type="number" inputmode="decimal"></label>
+        </div>
+        <div class="row">
+          <label for="wake">起床<input id="wake" type="time"></label>
+          <label for="bed">就寝<input id="bed" type="time"></label>
+        </div>
+        <label for="cyc" id="cycL" hidden>月経周期の今の時期<select id="cyc"><option value="">使わない</option><option>月経期</option><option>卵胞期</option><option>排卵期前後</option><option>黄体期</option></select></label>
+        <label for="sup">いつも飲んでいるサプリ<input id="sup" type="text" placeholder="例：亜鉛、マカ、EPA"></label>
+        <button class="btn" id="save">保存する</button>
+      </div>
+      <div class="panel">
+        <h3>履歴の保存と復元（CSV）</h3>
+        <p>履歴は、この端末のブラウザの中に保存されます。容量は約5MBまでで、いっぱいに近づくと、古い履歴は自動で「要点だけ」に圧縮されます（数値と時間帯を残し、解説の文章を削ります）。要点だけなら、数年分が入ります。</p>
+        <div class="meter" aria-hidden="true"><span id="useBar"></span></div>
+        <p id="useTxt"></p>
+        <p>数年単位で残すには、ときどき CSV で書き出し、メモアプリやファイルアプリに貼って保管してください。書き出しには、保存されているすべての項目が入ります。保管した CSV を下に貼って取り込むと、詳細は直近20件だけ残し、古い分は不要な文章を削って取り込むので、より長い期間をブラウザで見られます。どちらもスマホ1台で、コピーと貼り付けだけでできます。</p>
+        <div class="btns"><button class="btn" id="csvc">CSVをコピー</button></div>
+        <label for="csvin">CSVを取り込む<textarea id="csvin" rows="3" placeholder="保管しておいた CSV をここに貼り付け"></textarea></label>
+        <div class="btns"><button class="btn alt" id="csvb">取り込む</button><button class="btn alt" id="clr">履歴を全て消す</button></div>
+      </div>
+      <p class="note">結果は一般的な目安による推定で、医療上の助言ではありません。</p>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="メニュー">
+  <button data-t="home" aria-current="page"><span>◉</span>ホーム</button>
+  <button data-t="input"><span>＋</span>入力</button>
+  <button data-t="history"><span>▤</span>履歴</button>
+  <button data-t="settings"><span>⚙</span>設定</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+/* ---------- master data ---------- */
+const ST=[
+ {id:'alert',n:'シャキッと度',g:'head',i:'⚡',c:'--c1',hid:0,q:'眠くないか・目が覚めているか'},
+ {id:'focus',n:'集中力',g:'head',i:'🎯',c:'--c5',hid:0,q:'作業や勉強に没頭して続けられるか'},
+ {id:'mood',n:'気分の安定',g:'head',i:'☀️',c:'--c7',hid:1,q:'イライラや落ち込みがないか'},
+ {id:'light',n:'体の軽さ',g:'body',i:'🪶',c:'--c6',hid:0,q:'だるくないか・疲れが溜まっていないか'},
+ {id:'vigor',n:'勢い・うるおい',g:'body',i:'🔥💧',c:'--c3',hid:0,q:'元気さ・みなぎり・みずみずしさ'},
+ {id:'fat',n:'脂肪の燃えやすさ',g:'body',i:'🔥',c:'--c8',hid:1,q:'今は脂肪がつきやすいか・燃えやすいか'},
+ {id:'recov',n:'回復・体づくり',g:'body',i:'💪',c:'--c2',hid:1,q:'運動や筋トレのあと、体が回復し育っているか'}
+];
+const GOALS=[
+ {id:'zone',n:'ゾーン掌握',d:'時間を忘れて集中できる状態を、一日のうちでできるだけ長く保つこと。',t:'頭と心の調子を上げる'},
+ {id:'slim',n:'スマート・スリム',d:'無理なく脂肪を落として、引き締まった体になること。',t:'体を引き締める'},
+ {id:'bulk',n:'バルク・強靭',d:'筋肉をしっかりつけて、強くて折れにくい体になること。',t:'体をつくる'},
+ {id:'rec',n:'超回復',d:'疲れや運動のダメージから、できるだけ早く元の調子に戻ること。',t:'疲れを残さない'},
+ {id:'vit',n:'みなぎり',d:'一日を通して、元気さと活力が切れない状態を保つこと。',t:'活力を高める'}
+];
+const TONES=['--c5','--c1','--c3','--c4','--c2'];
+const RULES=`【7つのステータス（すべて0〜100、高いほど良い状態。表示名と意味）】
+alert=シャキッと度（眠くない）/ focus=集中力（没頭できる）/ mood=気分の安定 / light=体の軽さ（だるくない）/ vigor=勢い・うるおい（元気さ。男性は活力・血流寄り、女性は周期・鉄分・むくみ・血流寄りで評価）/ fat=脂肪の燃えやすさ / recov=回復・体づくり
+
+【評価ルール（目安）】
+- alert: 糖質の急な摂取は一時上昇のあと低下（食後60〜120分で眠気）。食物繊維・酢・タンパク質・脂質を一緒に摂ると緩やか。睡眠不足と夜更かしで低下。
+- focus: 適量のカフェイン（100〜200mg）で上昇、400mg超や連日摂取（耐性）では効きが落ちる。コリン源（卵など）と十分な睡眠で上昇。
+- mood: 睡眠・日光・タンパク質・適度な運動で上昇。血糖の乱高下、睡眠不足、強いストレスで低下。
+- light: 睡眠の質・量、水分、軽い運動で上昇。夜間の高強度運動、カフェイン過多、脱水で低下。
+- vigor: 睡眠、亜鉛、シトルリン等の血流を助ける栄養、適度な運動で上昇。睡眠不足、慢性ストレス、脱水で低下。マカ等は継続で効きやすさが上がる。
+- fat: 低インスリン状態や食後の軽い運動で上昇。糖質中心の食事、夜遅い食事で低下。
+- recov: タンパク質（体重あたり0.3g/kg程度）とレジスタンス運動、シトルリン併用で上昇。長い空腹、睡眠不足で低下。
+- 時間帯: 朝は活動向き、インスリン感受性は午前が高い。夜のカフェインと高強度運動は睡眠を妨げる。
+- 拮抗: コーヒーとミネラルを同時に摂ると吸収が下がる。
+- 相乗: シトルリン×筋トレ、タンパク質×筋トレ後60分以内は効果アップ。
+- 矛盾の報告（例：寝たのにだるい）は、マグネシウム不足、夜間の運動による交感神経の高まり、睡眠の質低下などの隠れた原因を推論して debug に書く。`;
+const SCHEMA=`{
+ "statuses":[ {"id":"alert","value":0-100の整数,"delta":"+12 または -5 の文字列","state":"素人にも分かる一文","pro":"専門的な数値や用語（カスタムモード用）"}, …上の7つ全て ],
+ "timeline":[ {"from":"HH:MM","to":"HH:MM","title":"一目で分かる状態（日本語）","why":"素人にも分かる理由","science":"専門的な根拠（短く）"}, …2〜3個、現在時刻から数時間先まで ],
+ "debug":{"summary":"隠れた原因の推論、または今の状態の要約","actions":["次の一手を1〜3個"]},
+ "confidence":"low か mid か high"
+}`;
+const SAMPLE={statuses:[
+ {id:'alert',value:72,delta:'+18',state:'目が冴えている・眠気は少なめ',pro:'血糖 118mg/dL ↑ ｜ インスリン 24μU/mL'},
+ {id:'focus',value:77,delta:'+14',state:'没頭しやすい・コーヒーで上昇中',pro:'ACh 高 ｜ ドーパミン 充填率 77%'},
+ {id:'mood',value:68,delta:'+4',state:'おだやか・イライラしにくい',pro:'セロトニン 中〜高 ｜ コルチゾール 11μg/dL'},
+ {id:'light',value:49,delta:'-5',state:'だるさは少なめ・やや緊張気味',pro:'交感/副交感 58:42 ｜ アデノシン残余 低'},
+ {id:'vigor',value:64,delta:'+6',state:'安定・ストレスは低め',pro:'T/C 比 0.82 ｜ NO 産生 +35%'},
+ {id:'fat',value:41,delta:'-9',state:'今は蓄えやすい時間・午後に上昇',pro:'インスリン高 ｜ FFA 動員 低'},
+ {id:'recov',value:58,delta:'+31',state:'回復モード ON・体が育っている最中',pro:'血中アミノ酸 +42% ｜ mTOR 活性 中'}],
+ timeline:[
+ {from:'09:30',to:'11:30',title:'集中の最高潮',why:'糖質とカフェインが同時に効く時間帯です。難しい作業はここに寄せましょう。',science:'吸収ピーク 60-90分 ｜ ACh↑ DA↑'},
+ {from:'12:00',to:'13:30',title:'眠気の波',why:'昼食後に血糖が急に上がり、その反動で眠くなりやすい時間です。',science:'インスリン反応 ｜ 血糖スパイク後の低下'},
+ {from:'14:00',to:'17:00',title:'脂肪燃焼タイム',why:'軽い運動を入れると、食後の余剰エネルギーが使われやすくなります。',science:'FFA 動員 ｜ 感受性: 午後高'}],
+ debug:{summary:'朝のコーヒーと糖質で集中の山は早めに来ますが、昼前に水分とマグネシウムが足りなくなりそうです。',actions:['水を500ml飲む','13:30ごろに15分の仮眠']},confidence:'mid'};
+
+/* ---------- storage ---------- */
+const K='statcraft-v1';
+let S={settings:{mode:'standard',goals:['zone'],sex:'m',age:'',ht:'',wt:'',wake:'07:00',bed:'23:30',cyc:'',sup:''},snaps:[]};
+try{const r=localStorage.getItem(K);if(r){const j=JSON.parse(r);if(j&&j.settings)S={settings:{...S.settings,...j.settings},snaps:j.snaps||[]}}}catch(e){}
+const LIMIT=5*1024*1024, KEEP_FULL=20;
+const usage=()=>{try{return (localStorage.getItem(K)||'').length*2}catch(e){return 0}};
+const trySet=()=>{try{localStorage.setItem(K,JSON.stringify(S));return true}catch(e){return false}};
+function compactSnap(x){if(x.c)return x;return{t:x.t,c:1,report:String(x.report||'').slice(0,60),data:{statuses:x.data.statuses.map(p=>({id:p.id,value:p.value,delta:p.delta})),timeline:(x.data.timeline||[]).slice(0,3).map(y=>({from:y.from,to:y.to,title:y.title})),debug:{}}}}
+function compactOld(keep){let n=0;const L=S.snaps.length;S.snaps=S.snaps.map((x,i)=>{if(i<L-keep&&!x.c){n++;return compactSnap(x)}return x});return n}
+function save(){
+  let ok=trySet();
+  if(ok&&usage()>LIMIT*0.6){const n=compactOld(KEEP_FULL);if(n){ok=trySet();toast(`容量が増えたため、古い${n}件を要点だけに圧縮しました。CSVで書き出しておくと安心です`)}}
+  if(!ok){compactOld(5);ok=trySet()}
+  if(!ok)toast('保存できませんでした。履歴をCSVで書き出してから、古い履歴を消してください');
+  return ok}
+function usageInfo(){const u=usage(),p=Math.min(100,Math.round(u/LIMIT*100)),full=S.snaps.filter(x=>!x.c).length,cp=S.snaps.length-full;return{p,u,full,cp}}
+function paintUsage(){const {p,u,full,cp}=usageInfo();const b=$('#useBar');if(b){b.style.width=Math.max(p,2)+'%';b.className=p>=80?'hi':p>=50?'mid':''}
+  const t=$('#useTxt');if(t)t.textContent=`使用量 約${(u/1048576).toFixed(2)}MB / 5MB（${p}%）　履歴 ${S.snaps.length}件（詳細 ${full}件・要点のみ ${cp}件）`+(p>=50?'　→ そろそろCSVで書き出すのがおすすめです':'');}
+let tm;function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('on');clearTimeout(tm);tm=setTimeout(()=>t.classList.remove('on'),2200)}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- render home ---------- */
+let viewIdx=-1; // -1 = latest/sample
+function current(){const sn=S.snaps;if(!sn.length)return{data:SAMPLE,t:null,sample:true};const s=sn[viewIdx<0?sn.length-1:viewIdx];return{data:s.data,t:s.t,sample:false,report:s.report,c:!!s.c}}
+function renderHome(){
+  const {data,t,sample,c}=current();
+  $('#sampleTag').hidden=!sample;$('#cNote').hidden=!c;
+  const gs=S.settings.goals.map(id=>GOALS.find(g=>g.id===id)).filter(Boolean);
+  const g0=gs[0]||GOALS[0];
+  $('#goalName').textContent=gs.length?gs.map(g=>g.n).join(' / '):g0.n;
+  $('#goalSub').textContent=g0.d;
+  $('#goalChips').innerHTML=(gs.length?gs:[g0]).map(g=>`<span class="chip">${esc(g.t)}</span>`).join('');
+  $('#snapTime').textContent=sample?'例':fmt(t);
+  const by=Object.fromEntries(data.statuses.map(x=>[x.id,x]));
+  const card=m=>{const p=by[m.id];return `<div class="g" style="--c:var(${m.c})"><div class="top"><span class="ico">${m.i}</span><span class="delta">${esc(p.delta)}</span></div><div class="name">${m.n}${m.hid?'<span class="hid">気づきにくい</span>':''}</div><div class="val">${p.value}<i>/100</i></div><div class="bar"><span style="width:0" data-w="${p.value}"></span></div><div class="state">${esc(p.state)}</div><div class="pro">${esc(p.pro)}</div></div>`};
+  $('#grid').innerHTML=[['head','🧠 頭'],['body','🫀 体']].map(([k,l])=>`<h3 class="grp">${l}</h3><div class="grid">${ST.filter(m=>m.g===k).map(card).join('')}</div>`).join('');
+  $('#tl').innerHTML=data.timeline.map((x,i)=>`<div class="slot" style="--c:var(${TONES[i%TONES.length]})"><div class="time"><b>${esc(x.from)}</b>${esc(x.to)}</div><div class="card"><h3>${esc(x.title)}</h3><p class="why">${esc(x.why)}</p><p class="sci">${esc(x.science)}</p></div></div>`).join('');
+  $('#dbgSum').textContent=data.debug.summary||'（要点だけの記録なので、解説は省略されています）';
+  $('#dbgAct').innerHTML=(data.debug.actions||[]).map(a=>`<li>${esc(a)}</li>`).join('');
+  const avg=Math.round(data.statuses.reduce((a,p)=>a+p.value,0)/data.statuses.length);
+  $('#arc').style.transition='none';$('#arc').style.strokeDashoffset=326.7;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    $$('.bar span').forEach(e=>e.style.width=e.dataset.w+'%');
+    $('#arc').style.transition='stroke-dashoffset .8s';$('#arc').style.strokeDashoffset=326.7*(1-avg/100);
+  }));
+  $('#score').textContent=avg;
+}
+const fmt=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+
+/* ---------- prompt ---------- */
+function profileText(){const s=S.settings;const sex={m:'男性',f:'女性',x:'回答なし'}[s.sex];
+  return [`性別:${sex}`,s.age&&`年齢:${s.age}`,s.ht&&`身長:${s.ht}cm`,s.wt&&`体重:${s.wt}kg`,`起床:${s.wake} 就寝:${s.bed}`,s.sex==='f'&&s.cyc&&`周期の時期:${s.cyc}`,s.sup&&`常用サプリ:${s.sup}`].filter(Boolean).join(' / ')}
+function buildPrompt(report,extra){
+  const s=S.settings, now=new Date();
+  const goals=s.goals.map(id=>GOALS.find(g=>g.id===id)?.n).filter(Boolean).join('、')||'未設定';
+  const hist=S.snaps.slice(-3).map(x=>`- ${fmt(x.t)} 報告「${x.report}」→ ${x.data.statuses.map(p=>p.id+':'+p.value).join(' ')}`).join('\n')||'（まだありません）';
+  const modeTxt={simple:'シンプル（state は短く直感的に、pro は空でよい）',standard:'スタンダード（state は平易に、pro は簡単な用語で）',custom:'カスタム（pro に専門用語と推定数値を詳しく）'}[s.mode];
+  return `あなたは、私の体調を整える生活アプリ「Stat Craft」の専属AIです。以下のルールに従って、私の報告から7つのステータスと、数時間先までの予測を推定してください。医療上の診断はせず、あくまで一般的な目安として答えてください。
+
+${RULES}
+
+【私のプロフィール】${profileText()}
+【今日の目標】${goals}
+【表示モード】${modeTxt}
+【現在の日時】${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}
+【直近の記録】
+${hist}
+
+【今回の報告】
+${report}
+${extra||''}
+【答え方】
+次の形式のJSONだけを、コードブロック1つで返してください。前置きや説明の文章は付けないでください。statuses は7つ全て、timeline は2〜3個にしてください。文章は日本語で、専門知識のない人にも分かる言葉を使ってください。
+${SCHEMA}`;
+}
+
+/* ---------- parse & validate ---------- */
+function parseAnswer(txt){
+  let t=txt.trim().replace(/```(?:json)?/gi,'');
+  const a=t.indexOf('{'), b=t.lastIndexOf('}');
+  if(a<0||b<a) throw new Error('{ ではじまる部分が見つかりません。AI の答えを全部コピーして貼ってください。');
+  let o;try{o=JSON.parse(t.slice(a,b+1))}catch(e){throw new Error('JSON として読めませんでした：'+e.message)}
+  const errs=[];
+  if(!Array.isArray(o.statuses)) errs.push('statuses がありません');
+  else for(const m of ST){const p=o.statuses.find(x=>x&&x.id===m.id);
+    if(!p) errs.push(`statuses に ${m.id} がありません`);
+    else{const v=Number(p.value);if(!isFinite(v)||v<0||v>100) errs.push(`${m.id} の value は0〜100の数にしてください`);else p.value=Math.round(v);
+      p.delta=String(p.delta??'±0');p.state=String(p.state??'');p.pro=String(p.pro??'')}}
+  if(!Array.isArray(o.timeline)||!o.timeline.length) errs.push('timeline がありません');
+  else o.timeline=o.timeline.slice(0,4).map(x=>({from:String(x.from??''),to:String(x.to??''),title:String(x.title??''),why:String(x.why??''),science:String(x.science??'')}));
+  if(!o.debug||typeof o.debug.summary!=='string') errs.push('debug.summary がありません');
+  else o.debug.actions=Array.isArray(o.debug.actions)?o.debug.actions.map(String):[];
+  if(errs.length) throw new Error(errs.join('\n'));
+  return {statuses:o.statuses.filter(p=>ST.some(m=>m.id===p.id)),timeline:o.timeline,debug:o.debug,confidence:o.confidence||'mid'};
+}
+
+/* ---------- copy ---------- */
+async function copyFrom(el,msg){
+  try{await navigator.clipboard.writeText(el.value);toast(msg)}
+  catch(e){el.removeAttribute('readonly');el.focus();el.select();toast('選択しました。コピーしてください')}
+}
+
+/* ---------- views ---------- */
+function show(v){
+  $$('section[data-v]').forEach(s=>s.hidden=s.dataset.v!==v);
+  $$('.tabs button').forEach(b=>b.toggleAttribute('aria-current',b.dataset.t===v)||b.removeAttribute('aria-current'));
+  $$('.tabs button').forEach(b=>{if(b.dataset.t===v)b.setAttribute('aria-current','page')});
+  if(v==='home')renderHome(); if(v==='history')renderHist(); if(v==='settings')renderSettings();
+  try{history.replaceState(null,'','#'+v)}catch(e){}
+  window.scrollTo(0,0);
+}
+$$('.tabs button').forEach(b=>b.onclick=()=>{if(b.dataset.t==='home')viewIdx=-1;show(b.dataset.t)});
+
+function setMode(m){S.settings.mode=m;document.body.dataset.mode=m;$$('.modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));save()}
+$$('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
+/* input flow */
+let lastReport='';
+$('#mk').onclick=()=>{
+  const r=$('#report').value.trim();
+  if(!r){toast('報告を書いてください');return}
+  lastReport=r;$('#prompt').value=buildPrompt(r);
+  $('#p2').hidden=false;$('#p3').hidden=false;$('#err').textContent='';$('#fix').hidden=true;
+  $('#p2').scrollIntoView({behavior:'smooth',block:'start'});
+};
+$('#cp').onclick=()=>copyFrom($('#prompt'),'コピーしました。AI に貼ってください');
+$('#load').onclick=()=>{
+  const a=$('#answer').value;
+  if(!a.trim()){toast('AI の答えを貼ってください');return}
+  try{
+    const data=parseAnswer(a);
+    S.snaps.push({t:Date.now(),report:lastReport||$('#report').value.trim(),data});
+    save();viewIdx=-1;
+    $('#report').value='';$('#answer').value='';$('#p2').hidden=true;$('#p3').hidden=true;$('#err').textContent='';
+    toast('結果を表示します');show('home');
+  }catch(e){
+    $('#err').textContent=e.message+'\n\n【対処】「修正依頼文をコピー」を押して AI に貼り、返ってきた答えを、この同じ欄に貼り直してください（「修正依頼文をコピー」を押すと、欄は自動で空になります）。';$('#fix').hidden=false;
+    $('#fix').dataset.err=e.message;
+  }
+};
+$('#clrA').onclick=()=>{$('#answer').value='';$('#err').textContent='';$('#fix').hidden=true;$('#answer').focus();toast('入力内容をクリアしました')};
+$('#fix').onclick=()=>{
+  const extra=`\n【前回の答えの問題】\n前回の答えは次の理由で読み込めませんでした。直したJSONだけを、もう一度返してください。\n${$('#fix').dataset.err}\n`;
+  $('#prompt').value=buildPrompt(lastReport||$('#report').value.trim()||'（前回と同じ）',extra);
+  copyFrom($('#prompt'),'修正依頼文をコピーしました。貼り戻しの欄は空にしました。AI の新しい答えを貼ってください');
+  $('#answer').value='';
+};
+
+/* history */
+function renderHist(){
+  const sn=S.snaps;$('#hcount').textContent=sn.length?sn.length+'件':'';
+  {const {p}=usageInfo();const hb=$('#hbanner');hb.hidden=p<50;hb.textContent=`ブラウザの容量を約${p}%使っています。設定の「CSVをコピー」で書き出して、メモなどに保管しておくと安心です。`}
+  $('#hist').innerHTML=sn.length?sn.map((x,i)=>({x,i})).reverse().map(({x,i})=>{const a=Math.round(x.data.statuses.reduce((s,p)=>s+p.value,0)/x.data.statuses.length);return `<button class="h" data-i="${i}"><div class="sc">${a}</div><div><small>${fmt(x.t)}${x.c?' ・ 要点のみ':''}</small><span>${esc(x.report)}</span></div></button>`}).join(''):`<div class="panel"><h3>まだ記録がありません</h3><p>「入力」から最初の報告をすると、ここに日ごとの結果が残ります。</p></div>`;
+  $$('.h').forEach(b=>b.onclick=()=>{viewIdx=+b.dataset.i;show('home')});
+}
+
+/* settings */
+function renderSettings(){
+  const s=S.settings;
+  $('#goals').innerHTML=GOALS.map(g=>`<label><input type="checkbox" value="${g.id}" ${s.goals.includes(g.id)?'checked':''}>${g.n}</label>`).join('');
+  $$('#goals input').forEach(i=>i.onchange=()=>{
+    const v=$$('#goals input:checked').map(x=>x.value);S.settings.goals=v;save();
+    $('#goalDesc').innerHTML=v.map(id=>{const g=GOALS.find(x=>x.id===id);return `<b>${g.n}</b>：${g.d}`}).join('<br>')});
+  $('#goalDesc').innerHTML=s.goals.map(id=>{const g=GOALS.find(x=>x.id===id);return `<b>${g.n}</b>：${g.d}`}).join('<br>');
+  for(const k of ['sex','age','ht','wt','wake','bed','cyc','sup']) $('#'+k).value=s[k]??'';
+  $('#cycL').hidden=s.sex!=='f';
+  paintUsage();
+}
+$('#sex').onchange=()=>{$('#cycL').hidden=$('#sex').value!=='f'};
+$('#save').onclick=()=>{for(const k of ['sex','age','ht','wt','wake','bed','cyc','sup']) S.settings[k]=$('#'+k).value; save();toast('保存しました')};
+const IDS=ST.map(m=>m.id);
+const COLS=['v','t','date','report','conf',...IDS.map(i=>i+'_v'),...IDS.map(i=>i+'_d'),...IDS.map(i=>i+'_s'),...IDS.map(i=>i+'_p'),'timeline','dbg_summary','dbg_actions','settings'];
+const q=v=>{v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+function toCSV(){
+  const rows=[COLS.join(',')];
+  const base=r=>COLS.map(c=>q(r[c])).join(',');
+  if(!S.snaps.length)rows.push(base({settings:JSON.stringify(S.settings)}));
+  S.snaps.forEach((x,i)=>{
+    const by=Object.fromEntries(x.data.statuses.map(p=>[p.id,p]));
+    const r={v:1,t:x.t,date:new Date(x.t).toISOString(),report:x.report,conf:x.data.confidence||'',timeline:JSON.stringify(x.data.timeline||[]),dbg_summary:x.data.debug?.summary||'',dbg_actions:JSON.stringify(x.data.debug?.actions||[]),settings:i===0?JSON.stringify(S.settings):''};
+    for(const id of IDS){const p=by[id]||{};r[id+'_v']=p.value??'';r[id+'_d']=p.delta??'';r[id+'_s']=p.state??'';r[id+'_p']=p.pro??''}
+    rows.push(base(r))});
+  return rows.join('\n')}
+function parseCSV(s){const rows=[];let row=[],f='',inq=false;s=s.replace(/^﻿/,'');
+  for(let i=0;i<s.length;i++){const c=s[i];
+    if(inq){if(c==='"'){if(s[i+1]==='"'){f+='"';i++}else inq=false}else f+=c}
+    else if(c==='"')inq=true;
+    else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&s[i+1]==='\n')i++;row.push(f);f='';if(row.length>1||row[0]!=='')rows.push(row);row=[]}
+    else f+=c}
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows}
+function importCSV(text){
+  const rows=parseCSV(text);
+  if(rows.length<2)throw new Error('データの行が見つかりません');
+  const H=rows[0].map(h=>h.trim());
+  if(!H.includes('t')||!H.includes('alert_v'))throw new Error('このアプリが書き出した CSV ではないようです。1行目の見出しも含めて貼ってください');
+  const ix=Object.fromEntries(H.map((h,i)=>[h,i]));
+  const g=(r,k)=>ix[k]==null?'':(r[ix[k]]??'');
+  const have=new Set(S.snaps.map(x=>x.t));
+  let add=0,skip=0,ns=null;const out=[];
+  for(const r of rows.slice(1)){
+    const st=g(r,'settings');if(st&&!ns){try{ns=JSON.parse(st)}catch(e){}}
+    const t=Number(g(r,'t'));if(!isFinite(t)||t<=0)continue;
+    if(have.has(t)){skip++;continue}
+    const statuses=[];let bad=false;
+    for(const id of IDS){const raw=g(r,id+'_v'),v=Number(raw);if(raw===''||!isFinite(v)){bad=true;break}statuses.push({id,value:Math.max(0,Math.min(100,Math.round(v))),delta:g(r,id+'_d')||'±0',state:g(r,id+'_s'),pro:g(r,id+'_p')})}
+    if(bad){skip++;continue}
+    let tl=[],act=[];try{tl=JSON.parse(g(r,'timeline')||'[]')}catch(e){}try{act=JSON.parse(g(r,'dbg_actions')||'[]')}catch(e){}
+    out.push({t,report:g(r,'report'),data:{statuses,timeline:Array.isArray(tl)?tl:[],debug:{summary:g(r,'dbg_summary'),actions:Array.isArray(act)?act:[]},confidence:g(r,'conf')}});add++;have.add(t)}
+  S.snaps=S.snaps.concat(out).sort((a,b)=>a.t-b.t);
+  const n=compactOld(KEEP_FULL);
+  if(ns&&!S.settings.age&&!S.settings.ht&&!S.settings.wt)S.settings={...S.settings,...ns};
+  save();return{add,skip,n}}
+$('#csvc').onclick=async()=>{
+  const txt=toCSV();
+  try{await navigator.clipboard.writeText(txt);toast(`CSVをコピーしました（${S.snaps.length}件）。メモアプリなどに貼って保管してください`)}
+  catch(e){$('#csvin').value=txt;$('#csvin').focus();$('#csvin').select();toast('下の欄に出しました。全選択してコピーしてください')}};
+$('#csvb').onclick=()=>{
+  const t=$('#csvin').value;if(!t.trim()){toast('CSVを貼ってください');return}
+  try{const r=importCSV(t);$('#csvin').value='';setMode(S.settings.mode);renderSettings();
+    toast(`${r.add}件を取り込みました（重複など${r.skip}件は除外）`+(r.n?`。古い${r.n}件は要点だけに圧縮しました`:''))}
+  catch(e){toast(e.message)}};
+let armed=false;
+$('#clr').onclick=()=>{if(!armed){armed=true;$('#clr').textContent='もう一度押すと全て消えます（先にCSVを保管）';setTimeout(()=>{armed=false;$('#clr').textContent='履歴を全て消す'},4000);return}
+  armed=false;S.snaps=[];save();viewIdx=-1;$('#clr').textContent='履歴を全て消す';paintUsage();toast('履歴を消しました')};
+
+/* boot */
+const d=new Date();$('#date').textContent=`${d.getMonth()+1}/${d.getDate()} ${'日月火水木金土'[d.getDay()]}`;
+setMode(S.settings.mode);
+const h=(location.hash||'').slice(1);
+show(['home','input','history','settings'].includes(h)?h:'home');
+
+if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script>
+</body>
+</html>
