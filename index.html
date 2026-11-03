@@ -148,8 +148,13 @@ textarea{resize:vertical;line-height:1.5}
         <button data-m="custom" aria-pressed="false">カスタム</button>
       </div>
       <div class="sample" id="cNote" hidden>圧縮された記録です。数値と時間帯だけを表示しています。</div>
-      <div class="sample" id="sampleTag" hidden>サンプル表示です。「入力」から最初の報告をすると、あなたの結果に置き換わります。</div>
-      <div class="hero">
+      <div class="panel" id="welcome" hidden>
+        <h3>はじめましょう</h3>
+        <p>食事・運動・睡眠・サプリを報告すると、ここに体の7つの状態と、数時間先の予測が表示されます。</p>
+        <ol class="tips" style="font-size:13px"><li>「入力」で、いまの状況を細かく書く</li><li>できた依頼文を、ふだん使っている AI に貼る</li><li>AI の答えをここに貼り戻す</li></ol>
+        <div class="btns"><button class="btn" id="goInput">最初の報告をする</button></div>
+      </div>
+      <div class="hero dash">
         <div class="ring">
           <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface2)" stroke-width="12"/><circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
           <div class="num"><b id="score">0</b><small>COND</small></div>
@@ -161,9 +166,9 @@ textarea{resize:vertical;line-height:1.5}
           <div class="chips" id="goalChips"></div>
         </div>
       </div>
-      <div><h2><span>ステータス変化</span><span id="snapTime"></span></h2><div id="grid"></div></div>
-      <div><h2><span>今日の予測タイムライン</span><span>推定</span></h2><div class="tl" id="tl"></div></div>
-      <div class="debug"><h3>🔍 生体デバッグ</h3><p id="dbgSum"></p><ul id="dbgAct"></ul></div>
+      <div class="dash"><h2><span>ステータス変化</span><span id="snapTime"></span></h2><div id="grid"></div></div>
+      <div class="dash"><h2><span>今日の予測タイムライン</span><span>推定</span></h2><div class="tl" id="tl"></div></div>
+      <div class="debug dash"><h3>🔍 生体デバッグ</h3><p id="dbgSum"></p><ul id="dbgAct"></ul></div>
     </div>
   </section>
 
@@ -340,13 +345,13 @@ let viewIdx=-1; // -1 = latest/sample
 function current(){const sn=S.snaps;if(!sn.length)return{data:SAMPLE,t:null,sample:true};const s=sn[viewIdx<0?sn.length-1:viewIdx];return{data:s.data,t:s.t,sample:false,report:s.report,c:!!s.c}}
 function renderHome(){
   const {data,t,sample,c}=current();
-  $('#sampleTag').hidden=!sample;$('#cNote').hidden=!c;
+  $('#welcome').hidden=!sample;$$('.dash').forEach(e=>e.hidden=sample);$('#cNote').hidden=!c;
   const gs=S.settings.goals.map(id=>GOALS.find(g=>g.id===id)).filter(Boolean);
   const g0=gs[0]||GOALS[0];
   $('#goalName').textContent=gs.length?gs.map(g=>g.n).join(' / '):g0.n;
   $('#goalSub').textContent=g0.d;
   $('#goalChips').innerHTML=(gs.length?gs:[g0]).map(g=>`<span class="chip">${esc(g.t)}</span>`).join('');
-  $('#snapTime').textContent=sample?'例':fmt(t);
+  $('#snapTime').textContent=sample?'':fmt(t);
   const by=Object.fromEntries(data.statuses.map(x=>[x.id,x]));
   const card=m=>{const p=by[m.id];return `<div class="g" style="--c:var(${m.c})"><div class="top"><span class="ico">${m.i}</span><span class="delta">${esc(p.delta)}</span></div><div class="name">${m.n}${m.hid?'<span class="hid">気づきにくい</span>':''}</div><div class="val">${p.value}<i>/100</i></div><div class="bar"><span style="width:0" data-w="${p.value}"></span></div><div class="state">${esc(p.state)}</div><div class="pro">${esc(p.pro)}</div></div>`};
   $('#grid').innerHTML=[['head','🧠 頭'],['body','🫀 体']].map(([k,l])=>`<h3 class="grp">${l}</h3><div class="grid">${ST.filter(m=>m.g===k).map(card).join('')}</div>`).join('');
@@ -455,6 +460,7 @@ $('#load').onclick=()=>{
   }
 };
 $('#clrA').onclick=()=>{$('#answer').value='';$('#err').textContent='';$('#fix').hidden=true;$('#answer').focus();toast('入力内容をクリアしました')};
+$('#goInput').onclick=()=>show('input');
 $('#fix').onclick=()=>{
   const extra=`\n【前回の答えの問題】\n前回の答えは次の理由で読み込めませんでした。直したJSONだけを、もう一度返してください。\n${$('#fix').dataset.err}\n`;
   $('#prompt').value=buildPrompt(lastReport||$('#report').value.trim()||'（前回と同じ）',extra);
